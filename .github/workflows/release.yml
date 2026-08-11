@@ -9,7 +9,8 @@ name: Build & Release
 #   3. 自动生成各平台可执行文件并发布 Release
 #
 # 需要调整的地方(按你的项目改):
-#   - 下方 <...> 占位符(入口脚本、项目名、依赖、附加资源)
+#   - 下方 <...> 占位符(入口脚本、项目名、依赖)
+#   - 示例: 本模板自带 example.py, 直接打 tag 即可验证全流程
 # ============================================================
 
 on:
@@ -28,14 +29,14 @@ jobs:
       matrix:
         include:
           - os: windows-latest
-            artifact: <PROJECT>-windows-x64.exe
-            exe: <PROJECT>.exe
+            artifact: release-template-windows-x64.exe
+            exe: release-template.exe
           - os: ubuntu-latest
-            artifact: <PROJECT>-linux-x64
-            exe: <PROJECT>-linux
+            artifact: release-template-linux-x64
+            exe: release-template-linux
           - os: macos-latest
-            artifact: <PROJECT>-macos-x64
-            exe: <PROJECT>-macos
+            artifact: release-template-macos-x64
+            exe: release-template-macos
 
     runs-on: ${{ matrix.os }}
 
@@ -51,16 +52,12 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          # 换成你的项目依赖
-          python -m pip install pyinstaller <YOUR_DEPS>
+          # 换成你的项目依赖, 例如: python -m pip install pyinstaller requests
+          python -m pip install pyinstaller
 
       - name: Build with PyInstaller (Windows)
         run: |
-          python -m PyInstaller --onefile --name "$env:MATRIX_EXE" `
-            --hidden-import <YOUR_MODULE1> `
-            --add-data "index.html;." `
-            --add-data "logo.png;." `
-            bili_server.py
+          python -m PyInstaller --onefile --name "$env:MATRIX_EXE" example.py
         shell: pwsh
         if: runner.os == 'Windows'
         env:
@@ -68,11 +65,7 @@ jobs:
 
       - name: Build with PyInstaller (Unix)
         run: |
-          python -m PyInstaller --onefile --name "${{ matrix.exe }}" \
-            --hidden-import <YOUR_MODULE1> \
-            --add-data "index.html:." \
-            --add-data "logo.png:." \
-            bili_server.py
+          python -m PyInstaller --onefile --name "${{ matrix.exe }}" example.py
         shell: bash
         if: runner.os != 'Windows'
 
