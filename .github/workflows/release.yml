@@ -1,0 +1,111 @@
+name: Build & Release
+
+# ============================================================
+# GitHub Actions 自动构建多平台 + 自动发布 Release 模板
+#
+# 用法:
+#   1. 把本文件放到你的项目 .github/workflows/ 目录
+#   2. 推送 tag 时自动触发, 例如: git tag v1.0.0 && git push origin v1.0.0
+#   3. 自动生成各平台可执行文件并发布 Release
+#
+# 需要调整的地方(按你的项目改):
+#   - 下方 <...> 占位符(入口脚本、项目名、依赖、附加资源)
+# ============================================================
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:        # 允许手动触发
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            artifact: <PROJECT>-windows-x64.exe
+            exe: <PROJECT>.exe
+          - os: ubuntu-latest
+            artifact: <PROJECT>-linux-x64
+            exe: <PROJECT>-linux
+          - os: macos-latest
+            artifact: <PROJECT>-macos-x64
+            exe: <PROJECT>-macos
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          # 换成你的项目依赖
+          python -m pip install pyinstaller <YOUR_DEPS>
+
+      - name: Build with PyInstaller (Windows)
+        run: |
+          python -m PyInstaller --onefile --name "$env:MATRIX_EXE" `
+            --hidden-import <YOUR_MODULE1> `
+            --add-data "index.html;." `
+            --add-data "logo.png;." `
+            bili_server.py
+        shell: pwsh
+        if: runner.os == 'Windows'
+        env:
+          MATRIX_EXE: ${{ matrix.exe }}
+
+      - name: Build with PyInstaller (Unix)
+        run: |
+          python -m PyInstaller --onefile --name "${{ matrix.exe }}" \
+            --hidden-import <YOUR_MODULE1> \
+            --add-data "index.html:." \
+            --add-data "logo.png:." \
+            bili_server.py
+        shell: bash
+        if: runner.os != 'Windows'
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: dist/${{ matrix.exe }}
+          if-no-files-found: error
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Determine tag name
+        id: tag
+        run: echo "TAG=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.TAG }}
+          name: ${{ steps.tag.outputs.TAG }}
+          generate_release_notes: true
+          files: |
+            artifacts/*
+            README.md
