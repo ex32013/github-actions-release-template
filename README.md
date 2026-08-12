@@ -81,9 +81,10 @@ git push origin v1.0.0        # 自动开始构建
 2. **PyInstaller 体积**：Python 打包的 exe 较大（几十~100MB），因为内含解释器和依赖库
 3. **杀毒软件误报**：PyInstaller 单文件 exe 偶尔会被 Windows Defender 误报，属正常现象
 4. **tag 与 Release 对应**：删除/重建同名 tag 后，Release 需要手动清理旧的
-5. **macOS 架构**：`macos-latest` 是 ARM(Apple Silicon) 机器，产物标记为 `-arm64`；如需 Intel(x64) 请改用 `macos-26-intel` runner 或额外 job
-6. **供应链加固**：第三方 action 已 pin 到 commit SHA、依赖已锁版本，请勿随意改回可变标签
-7. **手动触发**：Actions 页面点「Run workflow」也可触发，但不会发布新 tag（会用当前分支名作 Release 名），推荐用 tag 推送
+5. **发布后勿移动 tag**：workflow 触发后如果删除/重建/force-push 同名 tag，`Create Release` 步骤会因「tag 指向的 commit ≠ 触发时记录的 commit」而失败（`softprops/action-gh-release` 的防误发布保护）。想修正请先删掉失败 run，再推新 tag
+6. **macOS 架构**：`macos-latest` 是 ARM(Apple Silicon) 机器，产物标记为 `-arm64`；如需 Intel(x64) 请改用 `macos-26-intel` runner 或额外 job
+7. **供应链加固**：第三方 action 已 pin 到 commit SHA、依赖已锁版本，请勿随意改回可变标签
+8. **手动触发**：Actions 页面点「Run workflow」也可触发，但不会发布新 tag（会用当前分支名作 Release 名），推荐用 tag 推送
 
 ## 📁 项目结构
 
